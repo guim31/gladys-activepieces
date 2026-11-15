@@ -1,61 +1,176 @@
-# Demo Devices Template
+# Activepieces
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+[Activepieces](https://www.activepieces.com/) is an open-source automation
+tool you can host yourself: flows made of a trigger and steps fetch data, call
+services, send messages. This integration brings your Activepieces flows into
+Gladys: each flow becomes a device with its state (enabled or not, last run
+succeeded or failed, failures in the last 24 hours), scenes can **start a
+flow** through its webhook and use its answer, react when **any** run fails or
+a flow gets disabled, and a dashboard widget lists the failing flows first.
 
-## What you get
+Tested against a real self-hosted Activepieces 0.82 (Docker, Community
+Edition); not on Activepieces Cloud: feedback welcome on
+[the issues](https://github.com/guim31/gladys-activepieces/issues).
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+## What you need
 
-## Configuration
+- Gladys Assistant 5.1.0 or later.
+- Activepieces, self-hosted, reachable from the Gladys machine.
+- The email and password of an Activepieces user. The Community Edition has
+  **no API keys** (they belong to the paid editions), so the integration signs
+  in like the web interface. Create a dedicated user if you can: Gladys sees
+  the flows of its project.
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+At each refresh (one minute by default) the integration sends four requests to
+Activepieces, a few more the first time, and signs in again once a week (the
+session lasts 7 days). The Community Edition sets no rate limit on its API.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+## Getting started
 
-## Actions
+### 1. Prepare Activepieces
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+Note the address you open Activepieces with (port 8080 with the official
+docker-compose file) and the email and password of the user whose flows
+Gladys should follow. Sign-in with Google or another provider only: set a
+password for that user first.
 
-## Scenes
+### 2. Configure the integration
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+In Gladys, open the configuration of the Activepieces integration:
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+- **Activepieces address**: for example `http://192.168.1.2:8080`. An IP
+  address alone gets port 8080. A URL copied from the browser works too.
+- **Email** and **Password**: of the user of step 1.
+- **Project (optional)**: empty, the user's own project. Otherwise the id of
+  the project, or the address of one of its pages copied from the browser.
+- **Refresh interval**: 30 seconds to 5 minutes.
+- **Allow switching flows from Gladys**: off by default, see below.
+- **Language of the names**: language of the feature names, of the states and
+  of the scene results.
+
+Click **Test the connection**: it shows the version, the flows, the enabled
+ones and the failures of the last 24 hours.
+
+### 3. Add the flows
+
+Open the **Discover** tab of the integration and add the flows to follow, and
+the **Activepieces** device if you want the figures of the whole instance.
+Nothing is added on your behalf. The scene triggers work for every flow, added
+or not.
+
+## The devices
+
+Each flow gives a device:
+
+| Feature           | Value                                                  |
+| ----------------- | ------------------------------------------------------ |
+| Enabled           | the flow is enabled or not                             |
+| Last run          | Succeeded, Failed, Timed out, Running, Paused, Queued… |
+| Working           | No when the last finished run failed, Yes otherwise    |
+| Failures in 24 h  | failed runs over the last 24 hours                     |
+| Last run start    | start of the last run, day/month hours:minutes         |
+| Last run duration | of the last finished run, in seconds                   |
+
+A run under way keeps the verdict of the previous one in **Working**: a
+failing flow that runs again does not look repaired for a few seconds.
+
+The **Enabled** switch only shows the state by default. With **Allow switching
+flows from Gladys** on, it enables and disables the flow: click **Update** on
+the devices in the Discover tab after changing the option. A flow never
+published cannot be enabled.
+
+The **Activepieces** device gives **Reachable** (No while Activepieces does
+not answer), the **Version**, the **Enabled flows**, the **Failures in 24 h**
+and the **Flows in total**.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **Activepieces flows** widget shows three tiles (enabled flows, failures in
+24 hours, runs under way), then one row per flow: the failing ones first, then
+the running ones, then the others, with the state of the last run, when it
+started and the failures of the day. By default it lists the enabled flows;
+choose others in its settings (devices added to Gladys, shown with the name
+you gave them). The **Refresh** button reads Activepieces again; a setting
+hides it.
+
+## Scenes
+
+### Triggers
+
+- **A flow run fails**: a run ends failed, timed out, out of memory or in an
+  internal error. Filter: the flows (empty: any). Information passed on: flow
+  name, error message, failing step, run status, link to the run in
+  Activepieces.
+- **A flow is disabled**: an enabled flow becomes disabled, by hand, by
+  Activepieces or by a scene: its trigger no longer runs. Filter: the flows.
+  Information passed on: flow name.
+
+The first reading only notes what already happened: nothing is announced for
+the past. A failure that happens while Gladys or the integration restarts is
+announced once, at the next reading. For "Activepieces does not answer", use
+the **Reachable** feature of the Activepieces device in a scene.
+
+### Actions
+
+- **Start an Activepieces flow**: the flow must start with the **Catch
+  Webhook** trigger (authentication: None) and be published. In the scene,
+  choose the flow (a device added to Gladys), or paste the URL the trigger
+  shows (`…/api/v1/webhooks/…`) for a flow not added. Body: JSON such as
+  `{"room": "living room"}`, or a text sent as `{"text": "…"}`; scene values
+  can be inserted, and the flow reads them in `trigger.body`. Without **Wait
+  for the answer**, Activepieces answers at once and the run goes on alone.
+  With it, the flow must end with a **Return Response** step (Webhook piece),
+  within 30 seconds. Results: answered successfully, HTTP status (404: the
+  flow is disabled or not published; 0: no answer in time), message answered
+  (the `message` or `text` field of the answer), full answer.
+- **State of a flow**: enabled or not, last run failed or not, state, failures
+  in 24 h, last run, duration, last error and a ready-made sentence, for the
+  next actions (a message, a condition).
+- **Enable a flow** / **Disable a flow**: for example a flow that should only
+  run during the holidays. These actions work whatever the option of the
+  switch.
+
+### Scene ideas
+
+- **A flow run fails** → send a message: "Activepieces: {flow} failed in
+  {step}: {error}" with the link to the run.
+- A button on the dashboard or "I am leaving" → **Start an Activepieces flow**
+  with `{"user": "…"}` and **Wait for the answer**, then send the **Message
+  answered** by the flow.
+- **A flow is disabled** → send a message: a flow you rely on stopped.
+- Every morning → **State of a flow** "Nightly backup" → only continue if
+  "Last run failed" is true → send the **Sentence**.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **Email or password refused**: check them in the Activepieces sign-in page.
+  A user created through Google sign-in only has no password.
+- **Refused by Activepieces: this user may not do it**: the user is not a
+  member of the project, or its role cannot change flows.
+- **Project not found**: check the id, or leave the field empty.
+- **No Activepieces API at this address**: check the address (port 8080 with
+  the official docker-compose file). Behind a reverse proxy with a sub-path,
+  put the sub-path in the address.
+- **The address redirects**: enter the `https://` address.
+- **Certificate refused**: a self-signed certificate is not accepted; use the
+  `http://` address on the local network.
+- **The webhook answers 404**: the flow is disabled, was never published, or
+  its trigger is not Catch Webhook. The test URL (`/draft`) is not accepted.
+- **Wait for the answer gives status 0 or an empty answer**: add a Return
+  Response step at the end of the flow.
+- Logs: in Gladys, the integration page shows the logs of its container;
+  `LOG_LEVEL=debug` gives every reading.
+
+## Limits
+
+- Developed and tested against Activepieces 0.82 in Docker, without
+  Activepieces Cloud or the paid editions: feedback welcome.
+- One project per configuration; the user's password is stored by Gladys like
+  the other secrets of the integrations.
+- API keys of the paid editions are not supported yet.
+- Flows are not created or edited from Gladys.
+- At most 500 failed runs of the last 24 hours are read per reading, and at
+  most 10 failures are announced per reading.
+- Webhooks protected by basic or header authentication are not supported.
+- Activepieces keeps the runs 30 days by default
+  (`AP_EXECUTION_DATA_RETENTION_DAYS`).

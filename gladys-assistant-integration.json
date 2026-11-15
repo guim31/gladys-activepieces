@@ -1,177 +1,763 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "Activepieces",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Your Activepieces flows in Gladys: start them from a scene, react when one fails.",
+    "fr": "Vos flux Activepieces dans Gladys : lancez-les depuis une scène, réagissez quand l'un échoue.",
+    "de": "Deine Activepieces-Flows in Gladys: Starte sie aus einer Szene, reagiere, wenn einer fehlschlägt.",
+    "es": "Sus flujos de Activepieces en Gladys: láncelos desde una escena, reaccione cuando uno falle."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-activepieces:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-activepieces/main/cover.png",
+  "categories": ["services"],
+  "transports": ["local"],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Your Activepieces",
+        "fr": "Votre Activepieces",
+        "de": "Dein Activepieces",
+        "es": "Su Activepieces"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "Enter the address of Activepieces and the email and password of a user: the Community Edition has no API keys. Then add the flows to follow from the Discover tab.",
+        "fr": "Saisissez l'adresse d'Activepieces, et l'e-mail et le mot de passe d'un utilisateur : l'édition communautaire n'a pas de clé d'API. Ajoutez ensuite les flux à suivre depuis l'onglet Découverte.",
+        "de": "Gib die Adresse von Activepieces sowie E-Mail-Adresse und Passwort eines Benutzers ein: Die Community Edition hat keine API-Schlüssel. Füge dann die zu verfolgenden Flows im Tab „Entdecken“ hinzu.",
+        "es": "Introduzca la dirección de Activepieces y el correo electrónico y la contraseña de un usuario: la edición Community no tiene claves de API. Después añada los flujos que quiera seguir desde la pestaña Descubrir."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-activepieces/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Einrichtungsanleitung",
+            "es": "Guía de instalación"
+          }
+        },
+        {
+          "url": "https://www.activepieces.com/docs/flows/building-flows",
+          "label": {
+            "en": "Activepieces documentation",
+            "fr": "Documentation d'Activepieces",
+            "de": "Activepieces-Dokumentation",
+            "es": "Documentación de Activepieces"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "url",
+      "type": "string",
+      "label": {
+        "en": "Activepieces address",
+        "fr": "Adresse d'Activepieces",
+        "de": "Activepieces-Adresse",
+        "es": "Dirección de Activepieces"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The address you open Activepieces with. Port 8080 is added to a bare IP address.",
+        "fr": "L'adresse avec laquelle vous ouvrez Activepieces. Le port 8080 est ajouté à une adresse IP seule.",
+        "de": "Die Adresse, mit der du Activepieces öffnest. Zu einer reinen IP-Adresse wird Port 8080 ergänzt.",
+        "es": "La dirección con la que abre Activepieces. A una dirección IP sola se le añade el puerto 8080."
+      },
+      "placeholder": {
+        "en": "e.g. http://192.168.1.2:8080",
+        "fr": "ex. http://192.168.1.2:8080",
+        "de": "z. B. http://192.168.1.2:8080",
+        "es": "p. ej. http://192.168.1.2:8080"
+      },
+      "required": false
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "email",
+      "type": "string",
+      "label": {
+        "en": "Email",
+        "fr": "E-mail",
+        "de": "E-Mail-Adresse",
+        "es": "Correo electrónico"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Of the Activepieces user whose flows Gladys follows. A dedicated user is best.",
+        "fr": "De l'utilisateur Activepieces dont Gladys suit les flux. Un utilisateur dédié est préférable.",
+        "de": "Des Activepieces-Benutzers, dessen Flows Gladys verfolgt. Am besten ein eigener Benutzer.",
+        "es": "Del usuario de Activepieces cuyos flujos sigue Gladys. Es preferible un usuario dedicado."
+      },
+      "required": false
     },
     {
-      "key": "unit",
+      "key": "password",
+      "type": "secret",
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe",
+        "de": "Passwort",
+        "es": "Contraseña"
+      },
+      "required": false
+    },
+    {
+      "key": "project_id",
+      "type": "string",
+      "label": {
+        "en": "Project (optional)",
+        "fr": "Projet (facultatif)",
+        "de": "Projekt (optional)",
+        "es": "Proyecto (opcional)"
+      },
+      "description": {
+        "en": "Empty: the user's own project. Otherwise its id, or the address of one of its pages.",
+        "fr": "Vide : le projet de l'utilisateur. Sinon son identifiant, ou l'adresse d'une de ses pages.",
+        "de": "Leer: das eigene Projekt des Benutzers. Sonst seine ID oder die Adresse einer seiner Seiten.",
+        "es": "Vacío: el proyecto del usuario. Si no, su identificador o la dirección de una de sus páginas."
+      },
+      "required": false
+    },
+    {
+      "key": "options",
+      "type": "section",
+      "label": {
+        "en": "Options",
+        "fr": "Options",
+        "de": "Optionen",
+        "es": "Opciones"
+      }
+    },
+    {
+      "key": "poll_interval",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Refresh interval",
+        "fr": "Intervalle d'actualisation",
+        "de": "Aktualisierungsintervall",
+        "es": "Intervalo de actualización"
+      },
+      "description": {
+        "en": "How often Activepieces is read: four API requests or more each time.",
+        "fr": "La fréquence de lecture d'Activepieces : au moins quatre requêtes d'API à chaque fois.",
+        "de": "Wie oft Activepieces gelesen wird: jedes Mal mindestens vier API-Anfragen.",
+        "es": "Con qué frecuencia se lee Activepieces: al menos cuatro peticiones de API cada vez."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "60",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "30",
+          "label": {
+            "en": "30 seconds",
+            "fr": "30 secondes",
+            "de": "30 Sekunden",
+            "es": "30 segundos"
+          }
+        },
+        {
+          "value": "60",
+          "label": {
+            "en": "1 minute",
+            "fr": "1 minute",
+            "de": "1 Minute",
+            "es": "1 minuto"
+          }
+        },
+        {
+          "value": "120",
+          "label": {
+            "en": "2 minutes",
+            "fr": "2 minutes",
+            "de": "2 Minuten",
+            "es": "2 minutos"
+          }
+        },
+        {
+          "value": "300",
+          "label": {
+            "en": "5 minutes",
+            "fr": "5 minutes",
+            "de": "5 Minuten",
+            "es": "5 minutos"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "allow_toggle",
+      "type": "boolean",
+      "label": {
+        "en": "Allow switching flows from Gladys",
+        "fr": "Autoriser l'activation des flux depuis Gladys",
+        "de": "Flows aus Gladys schalten erlauben",
+        "es": "Permitir activar flujos desde Gladys"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Off: the Enabled switch only shows the state. On: it enables and disables the flow (then click Update in the Discover tab).",
+        "fr": "Désactivé : l'interrupteur Activé ne fait qu'afficher l'état. Activé : il active et désactive le flux (cliquez ensuite sur Mettre à jour dans l'onglet Découverte).",
+        "de": "Aus: Der Schalter „Aktiviert“ zeigt nur den Zustand. An: Er aktiviert und deaktiviert den Flow (klicke danach im Tab „Entdecken“ auf „Aktualisieren“).",
+        "es": "Desactivado: el interruptor Activado solo muestra el estado. Activado: activa y desactiva el flujo (después pulse Actualizar en la pestaña Descubrir)."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": false
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the names",
+        "fr": "Langue des noms",
+        "de": "Sprache der Namen",
+        "es": "Idioma de los nombres"
+      },
+      "description": {
+        "en": "Language of the feature names (set when a device is added), of the states and of the scene results.",
+        "fr": "Langue des noms des fonctionnalités (fixés à l'ajout d'un appareil), des états et des résultats de scène.",
+        "de": "Sprache der Funktionsnamen (beim Hinzufügen eines Geräts festgelegt), der Zustände und der Szenenergebnisse.",
+        "es": "Idioma de los nombres de las funciones (fijados al añadir un dispositivo), de los estados y de los resultados de escena."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
+      "key": "test_connection",
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion",
+        "de": "Verbindung testen",
+        "es": "Probar la conexión"
+      },
+      "timeout_seconds": 60
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "run_failed",
+      "label": {
+        "en": "A flow run fails",
+        "fr": "Une exécution de flux échoue",
+        "de": "Eine Flow-Ausführung schlägt fehl",
+        "es": "Una ejecución de flujo falla"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "A run of an Activepieces flow ends in error, with the step and the error message.",
+        "fr": "Une exécution d'un flux Activepieces se termine en erreur, avec l'étape et le message d'erreur.",
+        "de": "Eine Ausführung eines Activepieces-Flows endet mit einem Fehler, mit dem Schritt und der Fehlermeldung.",
+        "es": "Una ejecución de un flujo de Activepieces termina en error, con el paso y el mensaje de error."
       },
       "fields": [
         {
           "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
+          "source": "devices",
+          "label": {
+            "en": "Flows (empty: any)",
+            "fr": "Flux (vide : tous)",
+            "de": "Flows (leer: alle)",
+            "es": "Flujos (vacío: todos)"
+          }
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "flow",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Flow name",
+            "fr": "Nom du flux",
+            "de": "Name des Flows",
+            "es": "Nombre del flujo"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error message",
+            "fr": "Message d'erreur",
+            "de": "Fehlermeldung",
+            "es": "Mensaje de error"
+          }
+        },
+        {
+          "key": "step",
+          "type": "string",
+          "label": {
+            "en": "Failing step",
+            "fr": "Étape en échec",
+            "de": "Fehlerhafter Schritt",
+            "es": "Paso con error"
+          }
+        },
+        {
+          "key": "status",
+          "type": "string",
+          "label": {
+            "en": "Run status",
+            "fr": "Statut de l'exécution",
+            "de": "Status der Ausführung",
+            "es": "Estado de la ejecución"
+          }
+        },
+        {
+          "key": "run_url",
+          "type": "string",
+          "label": {
+            "en": "Link to the run",
+            "fr": "Lien vers l'exécution",
+            "de": "Link zur Ausführung",
+            "es": "Enlace a la ejecución"
+          }
+        }
+      ]
+    },
+    {
+      "key": "flow_disabled",
+      "label": {
+        "en": "A flow is disabled",
+        "fr": "Un flux est désactivé",
+        "de": "Ein Flow wird deaktiviert",
+        "es": "Un flujo se desactiva"
+      },
+      "description": {
+        "en": "An enabled Activepieces flow becomes disabled (by hand, by Activepieces or by a scene): its trigger no longer runs.",
+        "fr": "Un flux Activepieces activé devient désactivé (à la main, par Activepieces ou par une scène) : son déclencheur ne tourne plus.",
+        "de": "Ein aktivierter Activepieces-Flow wird deaktiviert (von Hand, von Activepieces oder durch eine Szene): Sein Auslöser läuft nicht mehr.",
+        "es": "Un flujo de Activepieces activado pasa a desactivado (a mano, por Activepieces o por una escena): su disparador ya no se ejecuta."
+      },
+      "fields": [
+        {
+          "key": "device",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Flows (empty: any)",
+            "fr": "Flux (vide : tous)",
+            "de": "Flows (leer: alle)",
+            "es": "Flujos (vacío: todos)"
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "flow",
+          "type": "string",
+          "label": {
+            "en": "Flow name",
+            "fr": "Nom du flux",
+            "de": "Name des Flows",
+            "es": "Nombre del flujo"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "run_flow",
+      "label": {
+        "en": "Start an Activepieces flow",
+        "fr": "Lancer un flux Activepieces",
+        "de": "Activepieces-Flow starten",
+        "es": "Iniciar un flujo de Activepieces"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Calls the webhook of a flow whose trigger is Catch Webhook, with a JSON body; can wait for its answer.",
+        "fr": "Appelle le webhook d'un flux dont le déclencheur est Catch Webhook, avec un corps JSON ; peut attendre sa réponse.",
+        "de": "Ruft den Webhook eines Flows mit dem Auslöser Catch Webhook mit einem JSON-Inhalt auf; kann auf seine Antwort warten.",
+        "es": "Llama al webhook de un flujo cuyo disparador es Catch Webhook, con un cuerpo JSON; puede esperar su respuesta."
+      },
+      "timeout_seconds": 45,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "Flow",
+            "fr": "Flux",
+            "de": "Flow",
+            "es": "Flujo"
+          },
+          "description": {
+            "en": "A flow added to Gladys, with the Catch Webhook trigger (authentication: None).",
+            "fr": "Un flux ajouté à Gladys, avec le déclencheur Catch Webhook (authentification : None).",
+            "de": "Ein zu Gladys hinzugefügter Flow mit dem Auslöser Catch Webhook (Authentifizierung: None).",
+            "es": "Un flujo añadido a Gladys, con el disparador Catch Webhook (autenticación: None)."
+          },
+          "required": false
+        },
+        {
+          "key": "webhook",
+          "type": "string",
+          "label": {
+            "en": "Or webhook URL",
+            "fr": "Ou URL du webhook",
+            "de": "Oder Webhook-URL",
+            "es": "O URL del webhook"
+          },
+          "description": {
+            "en": "Instead of a flow: the URL shown by the Catch Webhook trigger, for a flow not added to Gladys.",
+            "fr": "À la place d'un flux : l'URL affichée par le déclencheur Catch Webhook, pour un flux non ajouté à Gladys.",
+            "de": "Statt eines Flows: die vom Auslöser Catch Webhook angezeigte URL, für einen nicht zu Gladys hinzugefügten Flow.",
+            "es": "En lugar de un flujo: la URL que muestra el disparador Catch Webhook, para un flujo no añadido a Gladys."
+          },
+          "placeholder": {
+            "en": "e.g. http://192.168.1.2:8080/api/v1/webhooks/…",
+            "fr": "ex. http://192.168.1.2:8080/api/v1/webhooks/…",
+            "de": "z. B. http://192.168.1.2:8080/api/v1/webhooks/…",
+            "es": "p. ej. http://192.168.1.2:8080/api/v1/webhooks/…"
+          },
+          "required": false
+        },
+        {
+          "key": "body",
+          "type": "string",
+          "label": {
+            "en": "Body (JSON or text)",
+            "fr": "Corps (JSON ou texte)",
+            "de": "Inhalt (JSON oder Text)",
+            "es": "Cuerpo (JSON o texto)"
+          },
+          "description": {
+            "en": "Sent as is when it is JSON, otherwise as {\"text\": …}. Scene values can be inserted.",
+            "fr": "Envoyé tel quel s'il est en JSON, sinon sous la forme {\"text\": …}. Les valeurs de la scène peuvent y être insérées.",
+            "de": "Unverändert gesendet, wenn es JSON ist, sonst als {\"text\": …}. Werte der Szene können eingefügt werden.",
+            "es": "Se envía tal cual si es JSON; si no, como {\"text\": …}. Se pueden insertar valores de la escena."
+          },
+          "placeholder": {
+            "en": "e.g. {\"room\": \"living room\"}",
+            "fr": "ex. {\"piece\": \"salon\"}",
+            "de": "z. B. {\"raum\": \"Wohnzimmer\"}",
+            "es": "p. ej. {\"sala\": \"salón\"}"
+          },
+          "required": false
+        },
+        {
+          "key": "wait",
+          "type": "boolean",
+          "label": {
+            "en": "Wait for the answer",
+            "fr": "Attendre la réponse",
+            "de": "Auf die Antwort warten",
+            "es": "Esperar la respuesta"
+          },
+          "description": {
+            "en": "The flow must end with a Return Response step (30 s at most). Otherwise the run goes on alone.",
+            "fr": "Le flux doit finir par une étape Return Response (30 s au plus). Sinon l'exécution continue seule.",
+            "de": "Der Flow muss mit einem Schritt Return Response enden (höchstens 30 s). Sonst läuft die Ausführung allein weiter.",
+            "es": "El flujo debe terminar con un paso Return Response (30 s como máximo). Si no, la ejecución continúa sola."
+          },
+          "required": false
+        }
+      ],
+      "outputs": [
+        {
+          "key": "success",
+          "type": "boolean",
+          "label": {
+            "en": "Answered successfully",
+            "fr": "Réponse réussie",
+            "de": "Erfolgreich beantwortet",
+            "es": "Respuesta correcta"
+          }
+        },
+        {
+          "key": "status",
+          "type": "number",
+          "label": {
+            "en": "HTTP status (0: no answer in time)",
+            "fr": "Statut HTTP (0 : pas de réponse à temps)",
+            "de": "HTTP-Status (0: keine Antwort rechtzeitig)",
+            "es": "Estado HTTP (0: sin respuesta a tiempo)"
+          }
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Message answered",
+            "fr": "Message répondu",
+            "de": "Antwortnachricht",
+            "es": "Mensaje de respuesta"
+          }
+        },
+        {
+          "key": "response",
+          "type": "string",
+          "label": {
+            "en": "Full answer",
+            "fr": "Réponse complète",
+            "de": "Vollständige Antwort",
+            "es": "Respuesta completa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "get_flow_status",
+      "label": {
+        "en": "State of a flow",
+        "fr": "État d'un flux",
+        "de": "Zustand eines Flows",
+        "es": "Estado de un flujo"
+      },
+      "description": {
+        "en": "Reads the state of a flow for the next actions: last run, failures in 24 h, last error, and a ready-made sentence.",
+        "fr": "Lit l'état d'un flux pour les actions suivantes : dernière exécution, échecs sur 24 h, dernière erreur, et une phrase toute faite.",
+        "de": "Liest den Zustand eines Flows für die nächsten Aktionen: letzte Ausführung, Fehlschläge in 24 h, letzter Fehler und ein fertiger Satz.",
+        "es": "Lee el estado de un flujo para las acciones siguientes: última ejecución, fallos en 24 h, último error y una frase preparada."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Flow",
+            "fr": "Flux",
+            "de": "Flow",
+            "es": "Flujo"
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "enabled",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Enabled",
+            "fr": "Activé",
+            "de": "Aktiviert",
+            "es": "Activado"
+          }
+        },
+        {
+          "key": "failed",
+          "type": "boolean",
+          "label": {
+            "en": "Last run failed",
+            "fr": "Dernière exécution en échec",
+            "de": "Letzte Ausführung fehlgeschlagen",
+            "es": "Última ejecución fallida"
+          }
+        },
+        {
+          "key": "state",
+          "type": "string",
+          "label": {
+            "en": "State",
+            "fr": "État",
+            "de": "Zustand",
+            "es": "Estado"
+          }
+        },
+        {
+          "key": "failures_24h",
+          "type": "number",
+          "label": {
+            "en": "Failures in 24 h",
+            "fr": "Échecs sur 24 h",
+            "de": "Fehlschläge in 24 h",
+            "es": "Fallos en 24 h"
+          }
+        },
+        {
+          "key": "last_run",
+          "type": "string",
+          "label": {
+            "en": "Last run",
+            "fr": "Dernier lancement",
+            "de": "Letzter Start",
+            "es": "Último inicio"
+          }
+        },
+        {
+          "key": "duration",
+          "type": "number",
+          "label": {
+            "en": "Last run duration (s)",
+            "fr": "Durée de la dernière exécution (s)",
+            "de": "Dauer der letzten Ausführung (s)",
+            "es": "Duración de la última ejecución (s)"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Last error",
+            "fr": "Dernière erreur",
+            "de": "Letzter Fehler",
+            "es": "Último error"
+          }
+        },
+        {
+          "key": "sentence",
+          "type": "string",
+          "label": {
+            "en": "Sentence",
+            "fr": "Phrase",
+            "de": "Satz",
+            "es": "Frase"
+          }
+        }
+      ]
+    },
+    {
+      "key": "enable_flow",
+      "label": {
+        "en": "Enable a flow",
+        "fr": "Activer un flux",
+        "de": "Flow aktivieren",
+        "es": "Activar un flujo"
+      },
+      "description": {
+        "en": "Enables a published flow: its trigger runs again.",
+        "fr": "Active un flux publié : son déclencheur tourne de nouveau.",
+        "de": "Aktiviert einen veröffentlichten Flow: Sein Auslöser läuft wieder.",
+        "es": "Activa un flujo publicado: su disparador vuelve a ejecutarse."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Flow",
+            "fr": "Flux",
+            "de": "Flow",
+            "es": "Flujo"
+          },
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "disable_flow",
+      "label": {
+        "en": "Disable a flow",
+        "fr": "Désactiver un flux",
+        "de": "Flow deaktivieren",
+        "es": "Desactivar un flujo"
+      },
+      "description": {
+        "en": "Disables a flow, for example during the holidays: its trigger stops.",
+        "fr": "Désactive un flux, par exemple pendant les vacances : son déclencheur s'arrête.",
+        "de": "Deaktiviert einen Flow, zum Beispiel im Urlaub: Sein Auslöser stoppt.",
+        "es": "Desactiva un flujo, por ejemplo durante las vacaciones: su disparador se detiene."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Flow",
+            "fr": "Flux",
+            "de": "Flow",
+            "es": "Flujo"
+          },
+          "required": true
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "activepieces",
+      "label": {
+        "en": "Activepieces flows",
+        "fr": "Flux Activepieces",
+        "de": "Activepieces-Flows",
+        "es": "Flujos de Activepieces"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Failing flows first, then the running ones, then the others, with their last run.",
+        "fr": "Les flux en échec d'abord, puis ceux en cours, puis les autres, avec leur dernière exécution.",
+        "de": "Zuerst die fehlschlagenden Flows, dann die laufenden und die übrigen, mit letzter Ausführung.",
+        "es": "Primero los flujos con error, luego los que están en curso y los demás, con su última ejecución."
+      },
+      "icon": "zap",
+      "action_timeout_seconds": 60,
+      "settings": [
+        {
+          "key": "flows",
+          "type": "multi_select",
+          "source": "devices",
+          "label": {
+            "en": "Flows (empty: the enabled ones)",
+            "fr": "Flux (vide : les activés)",
+            "de": "Flows (leer: die aktivierten)",
+            "es": "Flujos (vacío: los activados)"
+          },
+          "description": {
+            "en": "Empty: every enabled flow. Only the devices added to Gladys can be chosen.",
+            "fr": "Vide : tous les flux activés. Seuls les appareils ajoutés à Gladys peuvent être choisis.",
+            "de": "Leer: alle aktivierten Flows. Nur die zu Gladys hinzugefügten Geräte sind wählbar.",
+            "es": "Vacío: todos los flujos activados. Solo se pueden elegir los dispositivos añadidos a Gladys."
+          },
+          "required": false
+        },
+        {
+          "key": "show_refresh",
+          "type": "boolean",
+          "label": {
+            "en": "Show the Refresh button",
+            "fr": "Afficher le bouton Actualiser",
+            "de": "Schaltfläche „Aktualisieren“ anzeigen",
+            "es": "Mostrar el botón Actualizar"
+          },
+          "required": false,
+          "default": true
+        }
+      ]
     }
   ]
 }
