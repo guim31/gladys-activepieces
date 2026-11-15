@@ -249,10 +249,12 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Lecture par cycle : flags, flux, 100 dernières exécutions, échecs des 24 h (statuts d'échec, `createdAfter`, au
   plus 5 pages), et une fois par flux absent (`flowId=…&limit=1`, au plus 10 par cycle). `/data/activepieces-state.json` :
   dernière exécution par flux, échecs des 24 h, flux activés (pour « Un flux est désactivé » même à travers un
-  redémarrage), `initialized`, `source` (adresse + projet : en changer efface tout). Premier passage : rien
+  redémarrage, gardé « activé » tant que Gladys refuse l'événement), échecs marqués `a` (annoncé) seulement quand Gladys
+  accepte l'événement (sinon rejoués aux lectures suivantes), `initialized`, `source` (adresse + projet : en changer efface tout). Premier passage : rien
   n'est annoncé.
 - Pas de déclencheur « injoignable » (contrairement à n8n) : l'appareil de l'instance a une fonctionnalité
-  **Joignable** (`input/binary`), seule publiée tant qu'Activepieces ne répond pas.
+  **Joignable** (`input/binary`), seule publiée tant que la lecture échoue ; elle ne passe à 0 (et le badge à
+  `unreachable`) que pour les erreurs réseau, pas pour un mot de passe refusé.
 - Le SDK oublie lui-même les valeurs publiées d'un appareil créé, modifié ou supprimé (`forgetPublishedStates`) :
   pas besoin de forcer la republication dans `onDeviceCreated`.
 - Aucune option du manifeste ne désactive une action de scène par défaut : « Lancer un flux » est toujours proposée.

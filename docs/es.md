@@ -105,7 +105,8 @@ de nuevo Activepieces; un ajuste lo oculta.
 ### Disparadores
 
 - **Una ejecución de flujo falla**: una ejecución termina fallida, con tiempo
-  agotado, sin memoria o con un error interno. Filtro: los flujos (vacío:
+  agotado, sin memoria, con la cuota o el
+  tamaño de registro superados, o con un error interno. Filtro: los flujos (vacío:
   todos). Información transmitida: nombre del flujo, mensaje de error, paso con
   error, estado de la ejecución, enlace a la ejecución en Activepieces.
 - **Un flujo se desactiva**: un flujo activado pasa a desactivado, a mano, por

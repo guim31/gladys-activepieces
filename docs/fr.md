@@ -105,7 +105,8 @@ Gladys, affichés avec le nom que vous leur avez donné). Le bouton
 ### Déclencheurs
 
 - **Une exécution de flux échoue** : une exécution se termine en échec, en
-  délai dépassé, en mémoire dépassée ou en erreur interne. Filtre : les flux
+  délai dépassé, en mémoire dépassée, en quota ou
+  taille de journal dépassés, ou en erreur interne. Filtre : les flux
   (vide : tous). Informations transmises : nom du flux, message d'erreur, étape
   en échec, statut de l'exécution, lien vers l'exécution dans Activepieces.
 - **Un flux est désactivé** : un flux activé devient désactivé, à la main, par

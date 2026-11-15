@@ -292,6 +292,9 @@ export class ActivepiecesClient {
       if (err.name === 'TimeoutError' || code === 23) {
         throw new ApError(ERROR_KINDS.TIMEOUT, 'No answer in time');
       }
+      if (code === 'TOO_LARGE') {
+        throw new ApError(ERROR_KINDS.HTTP, `Answer larger than ${MAX_BODY_BYTES} bytes`);
+      }
       throw new ApError(ERROR_KINDS.UNREACHABLE, String(code ?? err.name ?? err.message));
     }
   }

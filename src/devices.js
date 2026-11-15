@@ -299,13 +299,16 @@ export function flowValues(gladys, view, language) {
 }
 
 /**
- * The values of the instance device: only "reachable" while Activepieces does
- * not answer (the figures of the last read would look current).
+ * The values of the instance device: only "reachable" while the last read
+ * failed (the figures of an older read would look current).
  */
-export function instanceValues(gladys, { reachable, version, active, failures, total }) {
+export function instanceValues(
+  gladys,
+  { reachable, read = reachable, version, active, failures, total },
+) {
   const ids = instanceIds(gladys);
   const values = [{ key: INSTANCE_KEYS.REACHABLE, state: reachable ? 1 : 0 }];
-  if (reachable) {
+  if (read) {
     if (version) {
       values.push({ key: INSTANCE_KEYS.VERSION, text: version });
     }

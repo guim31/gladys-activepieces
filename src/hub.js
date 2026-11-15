@@ -22,6 +22,7 @@ import { DEVICE_TRANSPORTS, createLogger } from '@gladysassistant/integration-sd
 import {
   FAILED,
   FEATURE_KEYS,
+  ONGOING,
   VOLATILE,
   buildFlowDevice,
   buildInstanceDevice,
@@ -69,6 +70,8 @@ export const HUB_TIMINGS = {
 };
 
 const MAX_TRANSPORTS_PER_REQUEST = 100;
+// The errors that mean "no answer": Reachable at 0, the unreachable badge.
+const NETWORK_ERRORS = new Set([ERROR_KINDS.UNREACHABLE, ERROR_KINDS.TIMEOUT, ERROR_KINDS.TLS]);
 // Pages of failed runs read per cycle (100 each), at most.
 const MAX_ERROR_PAGES = 5;
 // Flows asked for their own last run per cycle, at most.
@@ -179,8 +182,10 @@ export class ActivepiecesHub {
     const signature = JSON.stringify([config.url, config.email, config.password, config.projectId]);
     if (signature !== this.signature) {
       this.signature = signature;
+      // An id typed but not understood must not fall back to the user's project.
+      const projectOk = !config.projectTyped || Boolean(config.projectId);
       this.client =
-        config.url && config.email && config.password
+        config.url && config.email && config.password && projectOk
           ? new ActivepiecesClient({
               url: config.url,
               email: config.email,
@@ -325,7 +330,7 @@ export class ActivepiecesHub {
       }
       const saved = this.saved.last[flow.id];
       const unknown = !(flow.id in this.saved.last);
-      if (unknown || (full && saved?.verdict === 'failed')) {
+      if (unknown || (full && (saved?.verdict === 'failed' || ONGOING.has(saved?.status)))) {
         const [last] = await client.runs({ flowId: flow.id, limit: 1 });
         seeds.set(flow.id, last?.flowId === flow.id ? last : null);
       }
@@ -391,19 +396,23 @@ export class ActivepiecesHub {
 
     // The failures of the window: the ones read now and the ones kept (pages
     // beyond the reading cap).
-    const fresh = [];
+    let fresh = 0;
     for (const run of [...errors, ...recent]) {
       if (!FAILED.has(run.status) || timeOf(run) < since) {
         continue;
       }
       if (!(run.id in this.saved.failures)) {
+        // `a`: announced. Set once Gladys accepted the scene event, so a
+        // failure Gladys refused (restarting) is announced at a later read.
         this.saved.failures[run.id] = {
           f: run.flowId,
           t: timeOf(run),
           message: run.error,
           step: run.step,
+          s: run.status,
+          a: !this.saved.initialized,
         };
-        fresh.push(run);
+        fresh += 1;
         stateChanged.add(run.flowId);
         dirty = true;
       }
@@ -431,33 +440,44 @@ export class ActivepiecesHub {
       }
     }
     const enabled = Object.fromEntries([...next].map(([id, flow]) => [id, flow.enabled]));
-    if (JSON.stringify(enabled) !== JSON.stringify(this.saved.enabled)) {
-      this.saved.enabled = enabled;
-      dirty = true;
-    }
-
-    if (this.saved.initialized) {
-      if (fresh.length > 0) {
-        await this.announce(fresh);
-      }
-      for (const flow of disabled) {
-        logger.info(`${flow.name}: disabled`);
-        await this.fire(TRIGGERS.DISABLED, {
-          device: flowIds(this.gladys, flow.id).device,
-          flow: flow.name,
-        });
-      }
-    } else {
+    if (!this.saved.initialized) {
       // The first read only sets what is known: no event for the past.
       this.saved.initialized = true;
+      disabled.length = 0;
       dirty = true;
     }
-    if (fresh.length > 0) {
-      widgetChanged = true;
+    // Written before the scene events: a stop while they go out must not
+    // announce the same failures again after the restart.
+    const before = JSON.stringify(this.saved.enabled);
+    this.saved.enabled = { ...enabled };
+    for (const flow of disabled) {
+      // Seen enabled until Gladys accepts the event: retried at the next read.
+      this.saved.enabled[flow.id] = true;
     }
-    // Written only when something changed: no wear of the SD card at every read.
+    if (JSON.stringify(this.saved.enabled) !== before) {
+      dirty = true;
+    }
     if (dirty) {
       this.store.save(this.saved);
+    }
+
+    let announced = await this.announce();
+    for (const flow of disabled) {
+      logger.info(`${flow.name}: disabled`);
+      const ok = await this.fire(TRIGGERS.DISABLED, {
+        device: flowIds(this.gladys, flow.id).device,
+        flow: flow.name,
+      });
+      if (ok) {
+        this.saved.enabled[flow.id] = false;
+        announced = true;
+      }
+    }
+    if (announced) {
+      this.store.save(this.saved);
+    }
+    if (fresh > 0) {
+      widgetChanged = true;
     }
     await this.publishStates({ changed: stateChanged });
     return widgetChanged;
@@ -474,26 +494,41 @@ export class ActivepiecesHub {
     };
   }
 
-  /** Fire "a run failed", oldest first, with the error of each run. */
-  async announce(runs) {
-    const ordered = [...runs].sort((a, b) => timeOf(a) - timeOf(b));
-    const announced = ordered.slice(-MAX_EVENTS_PER_READ);
-    if (ordered.length > announced.length) {
-      logger.warn(`${ordered.length - announced.length} older failure(s) not announced`);
+  /**
+   * Fire "a run failed" for the failures of the window not announced yet,
+   * oldest first, `MAX_EVENTS_PER_READ` at most per read.
+   * @returns {Promise<boolean>} whether one was announced
+   */
+  async announce() {
+    const pending = Object.entries(this.saved.failures)
+      .filter(([, failure]) => failure && failure.a === false)
+      .sort(([, x], [, y]) => x.t - y.t);
+    const batch = pending.slice(-MAX_EVENTS_PER_READ);
+    if (pending.length > batch.length) {
+      // Older ones beyond the cap are given up: a burst is not replayed.
+      logger.warn(`${pending.length - batch.length} older failure(s) not announced`);
+      for (const [, failure] of pending.slice(0, -MAX_EVENTS_PER_READ)) {
+        failure.a = true;
+      }
     }
-    for (const run of announced) {
-      const flow = this.flows.get(run.flowId);
-      const name = flow?.name ?? run.flowId;
-      logger.info(`${name}: run ${run.id} failed${run.step ? ` in ${run.step}` : ''}`);
-      await this.fire(TRIGGERS.FAILED, {
-        device: flowIds(this.gladys, run.flowId).device,
+    let announced = pending.length > batch.length;
+    for (const [id, failure] of batch) {
+      const name = this.flows.get(failure.f)?.name ?? failure.f;
+      const ok = await this.fire(TRIGGERS.FAILED, {
+        device: flowIds(this.gladys, failure.f).device,
         flow: name,
-        error: run.error,
-        step: run.step,
-        status: run.status,
-        run_url: `${this.config.url}/projects/${this.client?.projectId}/runs/${run.id}`,
+        error: failure.message ?? '',
+        step: failure.step ?? '',
+        status: failure.s ?? 'FAILED',
+        run_url: `${this.config.url}/projects/${this.client?.projectId}/runs/${id}`,
       });
+      if (ok) {
+        logger.info(`${name}: run ${id} failed${failure.step ? ` in ${failure.step}` : ''}`);
+        failure.a = true;
+        announced = true;
+      }
     }
+    return announced;
   }
 
   async applyFailure(err) {
@@ -507,15 +542,24 @@ export class ActivepiecesHub {
     return wasError !== err.kind;
   }
 
+  /** @returns {Promise<boolean>} whether Gladys accepted the event */
   async fire(key, data) {
     try {
       await this.gladys.publishSceneEvent(key, data);
+      this.problems.recover(`event:${key}`, `Scene event ${key} accepted again`);
+      return true;
     } catch (err) {
-      logger.warn(`Scene event ${key} refused: ${err.message}`);
+      this.problems.fail(`event:${key}`, `Scene event ${key} refused: ${err.message}`);
+      return false;
     }
   }
 
   // --- Views -------------------------------------------------------------------
+
+  /** Activepieces does not answer (a refused password is an answer). */
+  unreachable() {
+    return NETWORK_ERRORS.has(this.error?.kind);
+  }
 
   /** Failures of the window, by flow id. */
   failureCounts() {
@@ -561,7 +605,9 @@ export class ActivepiecesHub {
       }
     }
     return {
-      reachable: this.error === null,
+      reachable: !this.unreachable(),
+      // The figures are those of a successful read only.
+      read: this.error === null,
       version: this.version,
       active: flows.filter((flow) => flow.enabled).length,
       failures,
@@ -703,7 +749,7 @@ export class ActivepiecesHub {
       return;
     }
     let transport = isCloud(this.config.url) ? DEVICE_TRANSPORTS.CLOUD : DEVICE_TRANSPORTS.LOCAL;
-    if (this.error) {
+    if (this.unreachable()) {
       transport = DEVICE_TRANSPORTS.UNREACHABLE;
     }
     const entries = [];
@@ -792,6 +838,10 @@ export class ActivepiecesHub {
 
   /** The flow of a device field, read again if unknown or stale. */
   async flowOf(externalId) {
+    if (this.error) {
+      // The last read failed: Activepieces may be back since.
+      await this.refreshIfStale();
+    }
     this.assertReadable();
     if (!this.find(externalId)) {
       await this.refreshIfStale();

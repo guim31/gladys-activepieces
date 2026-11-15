@@ -457,3 +457,68 @@ test('a command does not wait for a slow read after it', async (t) => {
   assert.equal(world.ap.flow('Nightly report').enabled, true);
   await world.hub.polling?.catch(() => {});
 });
+
+test('a failure or a disabled flow Gladys refuses is announced at a later read, once', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  world.ap.run('Nightly backup', { status: 'FAILED', message: 'Late' });
+  world.ap.flow('Greeting webhook').enabled = false;
+  const publish = world.gladys.publishSceneEvent;
+  world.gladys.publishSceneEvent = async () => {
+    throw new Error('Gladys is restarting');
+  };
+  await world.hub.pollNow();
+  assert.equal(world.fake.sceneEvents.length, 0);
+  world.gladys.publishSceneEvent = publish;
+  await world.hub.pollNow();
+  await world.hub.pollNow();
+  assert.deepEqual(world.fake.sceneEvents.map((e) => [e.key, e.data.flow]).sort(), [
+    [TRIGGERS.DISABLED, 'Greeting webhook'],
+    [TRIGGERS.FAILED, 'Nightly backup'],
+  ]);
+});
+
+test('a busy instance: a flow last seen running is asked again for its last run', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  await createDevices(world);
+  const ids = idsOf(world, 'Nightly report');
+  world.ap.flow('Nightly report').enabled = true;
+  const run = world.ap.run('Nightly report', { status: 'RUNNING' });
+  await world.hub.pollNow();
+  assert.equal(world.fake.lastState(ids.feature(FEATURE_KEYS.STATE)), 'Running');
+  world.ap.finish(run);
+  for (let i = 0; i < 120; i += 1) {
+    world.ap.run('Greeting webhook');
+  }
+  await world.hub.pollNow();
+  assert.equal(world.fake.lastState(ids.feature(FEATURE_KEYS.STATE)), 'Succeeded');
+});
+
+test('a project id not understood reads nothing, not even the default project', async (t) => {
+  const world = await createWorld({ config: { ...CONFIG, project_id: 'not-a-project' } });
+  t.after(() => world.app.stop());
+  assert.equal(world.ap.requests.length, 0);
+  assert.equal(world.hub.client, null);
+});
+
+test('a refused password is not "unreachable"; a scene action reads again after an error', async (t) => {
+  const clock = createClock();
+  const world = await createWorld({ clock });
+  t.after(() => world.app.stop());
+  await createDevices(world);
+  const reachable = instanceIds(world.gladys).feature(INSTANCE_KEYS.REACHABLE);
+  world.ap.tokens.clear();
+  const password = world.hub.client.password;
+  world.hub.client.password = 'wrong-password';
+  await world.hub.pollNow();
+  assert.equal(world.fake.lastState(reachable), 1);
+  assert.equal(world.fake.transports.at(-1).transport, 'local');
+  assert.equal(world.fake.connectionStatus.connected, false);
+  world.hub.client.password = password;
+  clock.advance(20_000);
+  const ack = await world.fake.sceneAction('get_flow_status', {
+    device: idsOf(world, 'Nightly backup').device,
+  });
+  assert.equal(ack.success, true, ack.error);
+});

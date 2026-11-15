@@ -97,8 +97,8 @@ hides it.
 
 ### Triggers
 
-- **A flow run fails**: a run ends failed, timed out, out of memory or in an
-  internal error. Filter: the flows (empty: any). Information passed on: flow
+- **A flow run fails**: a run ends failed, timed out, out of memory, over a quota
+  or a log size limit, or in an internal error. Filter: the flows (empty: any). Information passed on: flow
   name, error message, failing step, run status, link to the run in
   Activepieces.
 - **A flow is disabled**: an enabled flow becomes disabled, by hand, by

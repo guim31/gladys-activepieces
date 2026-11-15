@@ -104,7 +104,8 @@ Einstellung blendet sie aus.
 ### Auslöser
 
 - **Eine Flow-Ausführung schlägt fehl**: Eine Ausführung endet fehlgeschlagen,
-  mit Zeitüberschreitung, ohne Speicher oder mit einem internen Fehler.
+  mit Zeitüberschreitung, ohne Speicher, über einem Kontingent oder
+  einer Protokollgrenze oder mit einem internen Fehler.
   Filter: die Flows (leer: alle). Weitergegebene Informationen: Name des
   Flows, Fehlermeldung, fehlerhafter Schritt, Status der Ausführung, Link zur
   Ausführung in Activepieces.
