@@ -128,6 +128,7 @@ export class ActivepiecesHub {
     this.readAt = 0;
     this.error = null;
     this.polling = null;
+    this.emitting = null;
     /** When the volatile features of a flow were last published, by id. */
     this.volatileAt = new Map();
     this.transports = new Map();
@@ -461,21 +462,7 @@ export class ActivepiecesHub {
       this.store.save(this.saved);
     }
 
-    let announced = await this.announce();
-    for (const flow of disabled) {
-      logger.info(`${flow.name}: disabled`);
-      const ok = await this.fire(TRIGGERS.DISABLED, {
-        device: flowIds(this.gladys, flow.id).device,
-        flow: flow.name,
-      });
-      if (ok) {
-        this.saved.enabled[flow.id] = false;
-        announced = true;
-      }
-    }
-    if (announced) {
-      this.store.save(this.saved);
-    }
+    await this.emit(disabled);
     if (fresh > 0) {
       widgetChanged = true;
     }
@@ -495,9 +482,37 @@ export class ActivepiecesHub {
   }
 
   /**
+   * Send the pending scene events, one sender at a time: a read started by a
+   * new configuration must not announce what an older read is announcing.
+   * @param {object[]} [disabled] flows seen going from enabled to disabled
+   */
+  emit(disabled = []) {
+    const run = async () => {
+      await this.announce();
+      for (const flow of disabled) {
+        if (this.saved.enabled[flow.id] !== true) {
+          continue; // announced meanwhile, or enabled again
+        }
+        logger.info(`${flow.name}: disabled`);
+        const ok = await this.fire(TRIGGERS.DISABLED, {
+          device: flowIds(this.gladys, flow.id).device,
+          flow: flow.name,
+        });
+        if (ok) {
+          this.saved.enabled[flow.id] = false;
+          this.store.save(this.saved);
+        }
+      }
+    };
+    this.emitting = (this.emitting ?? Promise.resolve()).then(run, run);
+    return this.emitting;
+  }
+
+  /**
    * Fire "a run failed" for the failures of the window not announced yet,
    * oldest first, `MAX_EVENTS_PER_READ` at most per read.
-   * @returns {Promise<boolean>} whether one was announced
+   * Each accepted event is saved at once: a stop in the middle does not
+   * announce it again after the restart.
    */
   async announce() {
     const pending = Object.entries(this.saved.failures)
@@ -510,8 +525,8 @@ export class ActivepiecesHub {
       for (const [, failure] of pending.slice(0, -MAX_EVENTS_PER_READ)) {
         failure.a = true;
       }
+      this.store.save(this.saved);
     }
-    let announced = pending.length > batch.length;
     for (const [id, failure] of batch) {
       const name = this.flows.get(failure.f)?.name ?? failure.f;
       const ok = await this.fire(TRIGGERS.FAILED, {
@@ -525,10 +540,9 @@ export class ActivepiecesHub {
       if (ok) {
         logger.info(`${name}: run ${id} failed${failure.step ? ` in ${failure.step}` : ''}`);
         failure.a = true;
-        announced = true;
+        this.store.save(this.saved);
       }
     }
-    return announced;
   }
 
   async applyFailure(err) {
@@ -538,6 +552,8 @@ export class ActivepiecesHub {
     if (wasError !== err.kind) {
       logger.warn(`Activepieces: ${err.message}`);
     }
+    // Events Gladys refused earlier do not wait for Activepieces to answer.
+    await this.emit();
     await this.publishStates();
     return wasError !== err.kind;
   }
