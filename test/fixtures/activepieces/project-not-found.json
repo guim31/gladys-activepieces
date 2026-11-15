@@ -1,0 +1,7 @@
+{
+  "code": "ENTITY_NOT_FOUND",
+  "params": {
+    "entityId": "AAAAAAAAAAAAAAAAAAAAA",
+    "entityType": "project"
+  }
+}

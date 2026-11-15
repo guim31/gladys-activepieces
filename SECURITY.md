@@ -30,6 +30,24 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- the **email and password of an Activepieces user**, stored by Gladys in the
+  integration configuration (never written to `/data`, never logged); they are
+  only sent to the sign-in endpoint of the configured address, and redirects
+  are not followed so they never reach another host. The session token
+  Activepieces returns (valid 7 days) is kept in memory only. With them, the
+  integration can read the flows and runs of the project and enable or disable
+  its flows; use a dedicated user if you can;
+- the **webhook URLs** of the flows started from scenes: the flow id in them is
+  the only protection of a webhook without authentication, so they are never
+  logged, and the token is never sent to a webhook;
+- `/data/activepieces-state.json`: the last run of each flow, which flows are
+  enabled, and the failures of the last 24 hours with their short error
+  message (no secret, but an error message is whatever the flow wrote);
+- network: HTTP(S) requests to the Activepieces address and to the webhook
+  URLs of the scenes, nothing else; no port is opened.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and Activepieces itself.

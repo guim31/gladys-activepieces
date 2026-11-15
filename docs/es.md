@@ -1,0 +1,189 @@
+# Activepieces
+
+[Activepieces](https://www.activepieces.com/) es una herramienta de
+automatización de código abierto que puede alojar usted mismo: flujos hechos de
+un disparador y de pasos obtienen datos, llaman a servicios, envían mensajes.
+Esta integración lleva sus flujos de Activepieces a Gladys: cada flujo se
+convierte en un dispositivo con su estado (activado o no, última ejecución
+correcta o fallida, fallos de las últimas 24 horas), las escenas pueden
+**iniciar un flujo** mediante su webhook y usar su respuesta, reaccionar cuando
+**cualquier** ejecución falla o un flujo se desactiva, y un widget del panel
+muestra primero los flujos con error.
+
+Probada con un Activepieces 0.82 real autoalojado (Docker, edición Community);
+no con Activepieces Cloud: sus comentarios son bienvenidos en
+[las issues](https://github.com/guim31/gladys-activepieces/issues).
+
+## Lo que necesita
+
+- Gladys Assistant 5.1.0 o posterior.
+- Activepieces, autoalojado y accesible desde la máquina de Gladys.
+- El correo electrónico y la contraseña de un usuario de Activepieces. La
+  edición Community **no tiene claves de API** (son de las ediciones de pago),
+  así que la integración inicia sesión como la interfaz web. Si puede, cree un
+  usuario dedicado: Gladys ve los flujos de su proyecto.
+
+En cada actualización (un minuto por defecto) la integración envía cuatro
+peticiones a Activepieces, algunas más la primera vez, y vuelve a iniciar
+sesión una vez por semana (la sesión dura 7 días). La edición Community no
+limita su API.
+
+## Primeros pasos
+
+### 1. Preparar Activepieces
+
+Anote la dirección con la que abre Activepieces (puerto 8080 con el archivo
+docker-compose oficial) y el correo electrónico y la contraseña del usuario
+cuyos flujos debe seguir Gladys. Si ese usuario solo inicia sesión con Google u
+otro proveedor, póngale primero una contraseña.
+
+### 2. Configurar la integración
+
+En Gladys, abra la configuración de la integración Activepieces:
+
+- **Dirección de Activepieces**: por ejemplo `http://192.168.1.2:8080`. A una
+  dirección IP sola se le añade el puerto 8080. Una URL copiada del navegador
+  también sirve.
+- **Correo electrónico** y **Contraseña**: los del usuario del paso 1.
+- **Proyecto (opcional)**: vacío, el proyecto del usuario. Si no, el
+  identificador del proyecto, o la dirección de una de sus páginas copiada del
+  navegador.
+- **Intervalo de actualización**: de 30 segundos a 5 minutos.
+- **Permitir activar flujos desde Gladys**: desactivado por defecto, vea más
+  abajo.
+- **Idioma de los nombres**: idioma de los nombres de las funciones, de los
+  estados y de los resultados de escena.
+
+Pulse **Probar la conexión**: muestra la versión, los flujos, los activados y
+los fallos de las últimas 24 horas.
+
+### 3. Añadir los flujos
+
+Abra la pestaña **Descubrir** de la integración y añada los flujos que quiera
+seguir, y el dispositivo **Activepieces** si quiere las cifras de toda la
+instancia. No se añade nada por usted. Los disparadores de escena funcionan
+para todos los flujos, añadidos o no.
+
+## Los dispositivos
+
+Cada flujo da un dispositivo:
+
+| Función                         | Valor                                                      |
+| ------------------------------- | ---------------------------------------------------------- |
+| Activado                        | el flujo está activado o no                                |
+| Última ejecución                | Correcto, Fallido, Tiempo agotado, En ejecución, En pausa… |
+| Funciona                        | No cuando la última ejecución terminada falló, Sí si no    |
+| Fallos en 24 h                  | ejecuciones fallidas de las últimas 24 horas               |
+| Último inicio                   | inicio de la última ejecución, día/mes horas:minutos       |
+| Duración de la última ejecución | de la última ejecución terminada, en segundos              |
+
+Una ejecución en curso conserva en **Funciona** el veredicto de la anterior:
+un flujo con error que vuelve a ejecutarse no parece reparado durante unos
+segundos.
+
+El interruptor **Activado** solo muestra el estado por defecto. Con **Permitir
+activar flujos desde Gladys**, activa y desactiva el flujo: pulse
+**Actualizar** en los dispositivos de la pestaña Descubrir después de cambiar
+la opción. Un flujo nunca publicado no se puede activar.
+
+El dispositivo **Activepieces** da **Accesible** (No mientras Activepieces no
+responde), la **Versión**, los **Flujos activados**, los **Fallos en 24 h** y
+los **Flujos en total**.
+
+## Panel
+
+El widget **Flujos de Activepieces** muestra tres casillas (flujos activados,
+fallos en 24 horas, ejecuciones en curso), y luego una fila por flujo: primero
+los que tienen error, luego los que están en curso y después los demás, con el
+estado de la última ejecución, su hora de inicio y los fallos del día. Por
+defecto muestra los flujos activados; elija otros en sus ajustes (dispositivos
+añadidos a Gladys, con el nombre que les ha dado). El botón **Actualizar** lee
+de nuevo Activepieces; un ajuste lo oculta.
+
+## Escenas
+
+### Disparadores
+
+- **Una ejecución de flujo falla**: una ejecución termina fallida, con tiempo
+  agotado, sin memoria, con la cuota o el
+  tamaño de registro superados, o con un error interno. Filtro: los flujos (vacío:
+  todos). Información transmitida: nombre del flujo, mensaje de error, paso con
+  error, estado de la ejecución, enlace a la ejecución en Activepieces.
+- **Un flujo se desactiva**: un flujo activado pasa a desactivado, a mano, por
+  Activepieces o por una escena: su disparador ya no se ejecuta. Filtro: los
+  flujos. Información transmitida: nombre del flujo.
+
+La primera lectura solo anota lo que ya ha pasado: no se anuncia nada del
+pasado. Un fallo ocurrido durante un reinicio de Gladys o de la integración se
+anuncia una vez, en la lectura siguiente. Para «Activepieces no responde», use
+la función **Accesible** del dispositivo Activepieces en una escena.
+
+### Acciones
+
+- **Iniciar un flujo de Activepieces**: el flujo debe empezar con el disparador
+  **Catch Webhook** (autenticación: None) y estar publicado. En la escena,
+  elija el flujo (un dispositivo añadido a Gladys), o pegue la URL que muestra
+  el disparador (`…/api/v1/webhooks/…`) para un flujo no añadido. Cuerpo: JSON
+  como `{"sala": "salón"}`, o un texto enviado como `{"text": "…"}`; se pueden
+  insertar valores de la escena, y el flujo los lee en `trigger.body`. Sin
+  **Esperar la respuesta**, Activepieces responde enseguida y la ejecución
+  continúa sola. Con esta opción, el flujo debe terminar con un paso **Return
+  Response** (pieza Webhook), en 30 segundos como máximo. Resultados:
+  respuesta correcta, estado HTTP (404: el flujo está desactivado o no
+  publicado; 0: sin respuesta a tiempo), mensaje de respuesta (el campo
+  `message` o `text` de la respuesta), respuesta completa.
+- **Estado de un flujo**: activado o no, última ejecución fallida o no, estado,
+  fallos en 24 h, último inicio, duración, último error y una frase preparada,
+  para las acciones siguientes (un mensaje, una condición).
+- **Activar un flujo** / **Desactivar un flujo**: por ejemplo un flujo que solo
+  debe ejecutarse durante las vacaciones. Estas acciones funcionan sea cual sea
+  la opción del interruptor.
+
+### Ideas de escenas
+
+- **Una ejecución de flujo falla** → enviar un mensaje: «Activepieces: {flujo}
+  ha fallado en el paso {paso}: {error}» con el enlace a la ejecución.
+- Un botón del panel o «Me voy» → **Iniciar un flujo de Activepieces** con
+  `{"usuario": "…"}` y **Esperar la respuesta**, y luego enviar el **Mensaje
+  de respuesta** del flujo.
+- **Un flujo se desactiva** → enviar un mensaje: un flujo del que depende se ha
+  detenido.
+- Cada mañana → **Estado de un flujo** «Copia nocturna» → continuar solo si
+  «Última ejecución fallida» es verdadero → enviar la **Frase**.
+
+## Solución de problemas
+
+- **Correo electrónico o contraseña rechazados**: compruébelos en la página de
+  inicio de sesión de Activepieces. Un usuario creado con Google no tiene
+  contraseña.
+- **Rechazado por Activepieces: este usuario no tiene permiso**: el usuario no
+  es miembro del proyecto, o su rol no puede modificar flujos.
+- **Proyecto no encontrado**: compruebe el identificador o deje el campo vacío.
+- **No hay ninguna API de Activepieces en esta dirección**: compruebe la
+  dirección (puerto 8080 con el archivo docker-compose oficial). Detrás de un
+  proxy inverso con subruta, ponga la subruta en la dirección.
+- **La dirección redirige**: introduzca la dirección `https://`.
+- **Certificado rechazado**: no se acepta un certificado autofirmado; use la
+  dirección `http://` en la red local.
+- **El webhook responde 404**: el flujo está desactivado, nunca se ha
+  publicado, o su disparador no es Catch Webhook. La URL de prueba (`/draft`)
+  no se acepta.
+- **Esperar la respuesta da el estado 0 o una respuesta vacía**: añada un paso
+  Return Response al final del flujo.
+- Registros: en Gladys, la página de la integración muestra los registros de
+  su contenedor; `LOG_LEVEL=debug` detalla cada lectura.
+
+## Límites
+
+- Desarrollada y probada con Activepieces 0.82 en Docker, sin Activepieces
+  Cloud ni las ediciones de pago: sus comentarios son bienvenidos.
+- Un proyecto por configuración; Gladys guarda la contraseña del usuario como
+  los demás secretos de las integraciones.
+- Las claves de API de las ediciones de pago aún no son compatibles.
+- Los flujos no se crean ni se modifican desde Gladys.
+- En cada lectura se leen como máximo 500 ejecuciones fallidas de las últimas
+  24 horas y se anuncian como máximo 10 fallos.
+- Los webhooks protegidos por autenticación basic o por cabecera no son
+  compatibles.
+- Activepieces conserva las ejecuciones 30 días por defecto
+  (`AP_EXECUTION_DATA_RETENTION_DAYS`).

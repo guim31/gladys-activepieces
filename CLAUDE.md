@@ -16,8 +16,8 @@ its only runtime dependency. It started from the official JavaScript template.
 ```bash
 npm install
 npm test                                  # node --test, the built-in runner
-node --test test/devices.test.js          # one file
-node --test --test-name-pattern "plug"    # tests whose name matches
+node --test test/hub.test.js              # one file
+node --test --test-name-pattern "fails"   # tests whose name matches
 npm run lint                              # ESLint
 npm run format:check                      # Prettier, as the CI runs it
 npm run format                            # Prettier, fix in place
@@ -31,16 +31,20 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: src/app.js registers the handlers before connect()
+src/app.js                        every SDK handler -> the hub (also used by the tests)
+src/hub.js                        reading timer, states, failures and disabled flows -> scene events, commands, views
+src/devices.js                    one device per flow + the instance device: features, names, values
+src/activepieces/client.js        REST API (sign-in, flows, runs, CHANGE_STATUS) + webhooks (fetch), errors by kind
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/widgets.js                    dashboard widget `activepieces` (manifest `widgets`)
+src/texts.js                      connection, error, state, report and action texts (4 languages), dates
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
+src/store.js, src/problems.js     /data/activepieces-state.json; one log line per repeated failure
 gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (en and fr mandatory)
 test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+                                  and helpers/fakeActivepieces.js (checked against test/fixtures/activepieces)
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +74,10 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, widget content, feature names, scene outputs, manifest texts, and
+  `docs/en.md`, `docs/fr.md`, `docs/de.md`, `docs/es.md`, kept in sync
+  (`test/i18n.test.js` checks the languages and the doc sections).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -214,6 +220,64 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Activepieces (propre à ce dépôt)
+
+- **Pas de clé d'API en édition communautaire** (vérifié sur 0.82, `EDITION: "ce"`) : le module `api-keys` n'est
+  enregistré que pour les éditions Cloud et Enterprise, derrière `platform.plan.apiKeysEnabled` ; un `Bearer sk-…`
+  y est refusé. L'intégration se connecte donc par `POST /api/v1/authentication/sign-in` (`{email, password}` →
+  `{token, projectId}`), comme l'interface. **Jeton valable 7 jours** : sur un 401, le client se reconnecte une fois et
+  rejoue la requête. Mauvais identifiants : 401 `{"code":"INVALID_CREDENTIALS"}` ; mot de passe de moins de 8
+  caractères : **400** de validation (traité comme un refus) ; jeton invalide : 401.
+- Lectures : `GET /api/v1/flags` (public : `CURRENT_VERSION`, `EDITION`), `GET /api/v1/flows?projectId=`, `GET
+/api/v1/flow-runs?projectId=&status=…&flowId=&createdAfter=` (plus récentes d'abord, pages par `next`, chaque
+  exécution porte **toute la version du flux**, d'où le plafond de 16 Mo). Projet inconnu : 404
+  `ENTITY_NOT_FOUND` / `entityType: "project"`. Le nom d'un flux est `version.displayName`. Identifiants : 21 lettres
+  et chiffres (nanoid), **aléatoires** : à égalité de date, la plus récemment créée l'emporte.
+- Statuts d'exécution : `SUCCEEDED`, `FAILED`, `INTERNAL_ERROR`, `TIMEOUT`, `MEMORY_LIMIT_EXCEEDED`,
+  `QUOTA_EXCEEDED`, `LOG_SIZE_EXCEEDED`, `CANCELED`, `RUNNING`, `QUEUED`, `PAUSED`. L'erreur est dans
+  `failedStep.{displayName,message}` de la liste (pas de requête de détail) ; le message commence par
+  `Error: Error: ` et contient la pile (première ligne gardée, préfixes retirés). Une exécution en cours garde le
+  verdict « Fonctionne » de la précédente (`verdict` dans `/data`).
+- Commande : `POST /api/v1/flows/<id>` `{type: "CHANGE_STATUS", request: {status: "ENABLED"|"DISABLED"}}` ; un flux
+  jamais publié (`publishedVersionId: null`) n'est pas activable (refusé côté intégration).
+- Webhooks : `POST /api/v1/webhooks/<flowId>` répond tout de suite `200 {}` (l'exécution suit) ; `/sync` attend
+  l'étape **Return Response** de la pièce Webhook (sans elle, le client attend 30 s, `AP_WEBHOOK_TIMEOUT_SECONDS`) ;
+  flux désactivé ou non publié : `404 {}` ; identifiant mal formé : 400. Sans jeton. L'identifiant du flux est le
+  seul secret d'un webhook sans authentification : **jamais journalisé**. Une URL d'un autre hôte est acceptée
+  (Activepieces annonce `AP_FRONTEND_URL`) ; l'URL `/draft` (test) est refusée.
+- Lecture par cycle : flags, flux, 100 dernières exécutions, échecs des 24 h (statuts d'échec, `createdAfter`, au
+  plus 5 pages), et une fois par flux absent (`flowId=…&limit=1`, au plus 10 par cycle). `/data/activepieces-state.json` :
+  dernière exécution par flux, échecs des 24 h, flux activés (pour « Un flux est désactivé » même à travers un
+  redémarrage, gardé « activé » tant que Gladys refuse l'événement), échecs marqués `a` (annoncé) seulement quand Gladys
+  accepte l'événement (sinon rejoués aux lectures suivantes), `initialized`, `source` (adresse + projet : en changer efface tout). Premier passage : rien
+  n'est annoncé.
+- Pas de déclencheur « injoignable » (contrairement à n8n) : l'appareil de l'instance a une fonctionnalité
+  **Joignable** (`input/binary`), seule publiée tant que la lecture échoue ; elle ne passe à 0 (et le badge à
+  `unreachable`) que pour les erreurs réseau, pas pour un mot de passe refusé.
+- Le SDK oublie lui-même les valeurs publiées d'un appareil créé, modifié ou supprimé (`forgetPublishedStates`) :
+  pas besoin de forcer la republication dans `onDeviceCreated`.
+- Aucune option du manifeste ne désactive une action de scène par défaut : « Lancer un flux » est toujours proposée.
+
+## Vérifié sur un vrai Activepieces
+
+Le 15/11/2026, image Docker de l'intégration avec les contraintes du bac à sable de Gladys (`--cap-drop ALL
+--security-opt no-new-privileges --read-only --memory 256m --pids-limit 256`, volume `/data`, réseau en pont) contre
+`activepieces/activepieces` **0.82.0** (édition communautaire, `AP_DB_TYPE=PGLITE`, `AP_REDIS_TYPE=MEMORY` : ni
+Postgres ni Redis), compte créé par `sign-up`, quatre flux créés par l'API (webhook + code qui réussit, webhook +
+code qui lève une erreur, webhook + Return Response, brouillon jamais publié).
+
+- **Sans Gladys** : reconnexion du SDK en backoff, pas de plantage, aucun secret dans les logs, ~18 Mo au repos,
+  arrêt propre sur SIGTERM (code 0).
+- **Intégration complète** (faux Gladys du SDK, noms en français, `TZ=Europe/Paris`) : découverte des 4 flux et de
+  l'instance, états, version, badge `local`, « Tester la connexion », « Lancer un flux » par appareil, par URL,
+  avec attente (`{"message":"Hello Gladys"}`), flux désactivé (404) ; échec réel annoncé une fois avec étape et
+  message ; « État d'un flux » ; widget validé ; interrupteur (désactivation → `flow_disabled`) et action
+  d'activation ; mauvais mot de passe, projet inconnu, retour ; Activepieces arrêté (`docker stop`) : statut,
+  Joignable à 0, badge `unreachable`, action en erreur lisible. ~90 Mo RSS pendant le test.
+- Non vérifié : Activepieces Cloud et éditions payantes, une instance Gladys réelle (rendu du widget, éditeur de
+  scènes), plusieurs projets, l'expiration réelle du jeton au bout de 7 jours (simulée dans les tests), une
+  instance avec des centaines de flux.
 
 ## Store
 

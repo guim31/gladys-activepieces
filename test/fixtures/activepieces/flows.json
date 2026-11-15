@@ -1,0 +1,201 @@
+{
+  "data": [
+    {
+      "id": "0jXMVm9MwuVUhuyzcPLH4",
+      "created": "2026-11-15T16:23:08.864Z",
+      "updated": "2026-11-15T16:23:09.917Z",
+      "projectId": "nAWuaAM4rycMEvMkyvHoZ",
+      "externalId": "nYBjkiJEViTNSlh51946i",
+      "ownerId": "f1L56YKOkoXRZOSOSPXVn",
+      "folderId": null,
+      "status": "ENABLED",
+      "publishedVersionId": "9BhOE3G8l0SfSe36LnB7U",
+      "metadata": null,
+      "operationStatus": "NONE",
+      "timeSavedPerRun": null,
+      "templateId": null,
+      "version": {
+        "id": "9BhOE3G8l0SfSe36LnB7U",
+        "created": "2026-11-15T16:23:08.867Z",
+        "updated": "2026-11-15T16:23:09.061Z",
+        "flowId": "0jXMVm9MwuVUhuyzcPLH4",
+        "displayName": "Gladys fails",
+        "trigger": {
+          "name": "trigger",
+          "valid": true,
+          "displayName": "Catch Webhook",
+          "nextAction": {
+            "name": "step_1",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "body": "{{trigger.body}}"
+              },
+              "sourceCode": {
+                "code": "export const code = async (inputs) => { throw new Error(\"Boom from Gladys test\"); };",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {}
+            },
+            "displayName": "Code",
+            "lastUpdatedDate": "2026-11-15T16:23:08.965Z"
+          },
+          "lastUpdatedDate": "2026-11-15T16:23:08.915Z",
+          "type": "PIECE_TRIGGER",
+          "settings": {
+            "propertySettings": {},
+            "pieceName": "@activepieces/piece-webhook",
+            "pieceVersion": "0.1.43",
+            "triggerName": "catch_webhook",
+            "input": {
+              "authType": "none"
+            }
+          }
+        },
+        "updatedBy": "f1L56YKOkoXRZOSOSPXVn",
+        "valid": true,
+        "schemaVersion": "20",
+        "agentIds": [],
+        "state": "LOCKED",
+        "connectionIds": [],
+        "backupFiles": null,
+        "notes": []
+      },
+      "triggerSource": {
+        "schedule": null
+      }
+    },
+    {
+      "id": "1crfut7FNxq2FoQfXgH46",
+      "created": "2026-11-15T16:23:03.354Z",
+      "updated": "2026-11-15T16:23:08.739Z",
+      "projectId": "nAWuaAM4rycMEvMkyvHoZ",
+      "externalId": "lXiHJA98285sCHFDMJjX4",
+      "ownerId": "f1L56YKOkoXRZOSOSPXVn",
+      "folderId": null,
+      "status": "ENABLED",
+      "publishedVersionId": "Wrawku1MnG1EFcp3pHcza",
+      "metadata": null,
+      "operationStatus": "NONE",
+      "timeSavedPerRun": null,
+      "templateId": null,
+      "version": {
+        "id": "Wrawku1MnG1EFcp3pHcza",
+        "created": "2026-11-15T16:23:03.362Z",
+        "updated": "2026-11-15T16:23:03.596Z",
+        "flowId": "1crfut7FNxq2FoQfXgH46",
+        "displayName": "Gladys OK",
+        "trigger": {
+          "name": "trigger",
+          "valid": true,
+          "displayName": "Catch Webhook",
+          "nextAction": {
+            "name": "step_1",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "body": "{{trigger.body}}"
+              },
+              "sourceCode": {
+                "code": "export const code = async (inputs) => { return { ok: true, got: inputs.body }; };",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {}
+            },
+            "displayName": "Code",
+            "lastUpdatedDate": "2026-11-15T16:23:03.538Z"
+          },
+          "lastUpdatedDate": "2026-11-15T16:23:03.465Z",
+          "type": "PIECE_TRIGGER",
+          "settings": {
+            "propertySettings": {},
+            "pieceName": "@activepieces/piece-webhook",
+            "pieceVersion": "0.1.43",
+            "triggerName": "catch_webhook",
+            "input": {
+              "authType": "none"
+            }
+          }
+        },
+        "updatedBy": "f1L56YKOkoXRZOSOSPXVn",
+        "valid": true,
+        "schemaVersion": "20",
+        "agentIds": [],
+        "state": "LOCKED",
+        "connectionIds": [],
+        "backupFiles": null,
+        "notes": []
+      },
+      "triggerSource": {
+        "schedule": null
+      }
+    },
+    {
+      "id": "u5Kk668UQcjxuk9f6ip01",
+      "created": "2026-11-15T16:23:09.998Z",
+      "updated": "2026-11-15T16:23:10.085Z",
+      "projectId": "nAWuaAM4rycMEvMkyvHoZ",
+      "externalId": "Ftop9uxts0KZXLtpb7qok",
+      "ownerId": "f1L56YKOkoXRZOSOSPXVn",
+      "folderId": null,
+      "status": "DISABLED",
+      "publishedVersionId": null,
+      "metadata": null,
+      "operationStatus": "NONE",
+      "timeSavedPerRun": null,
+      "templateId": null,
+      "version": {
+        "id": "79lBgKmXBGX2Vb2riMhKM",
+        "created": "2026-11-15T16:23:10.002Z",
+        "updated": "2026-11-15T16:23:10.090Z",
+        "flowId": "u5Kk668UQcjxuk9f6ip01",
+        "displayName": "Gladys draft",
+        "trigger": {
+          "name": "trigger",
+          "valid": true,
+          "displayName": "Catch Webhook",
+          "nextAction": {
+            "name": "step_1",
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "body": "{{trigger.body}}"
+              },
+              "sourceCode": {
+                "code": "export const code = async () => 1;",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {}
+            },
+            "displayName": "Code",
+            "lastUpdatedDate": "2026-11-15T16:23:10.090Z"
+          },
+          "lastUpdatedDate": "2026-11-15T16:23:10.048Z",
+          "type": "PIECE_TRIGGER",
+          "settings": {
+            "propertySettings": {},
+            "pieceName": "@activepieces/piece-webhook",
+            "pieceVersion": "0.1.43",
+            "triggerName": "catch_webhook",
+            "input": {
+              "authType": "none"
+            }
+          }
+        },
+        "updatedBy": "f1L56YKOkoXRZOSOSPXVn",
+        "valid": true,
+        "schemaVersion": "20",
+        "agentIds": [],
+        "state": "DRAFT",
+        "connectionIds": [],
+        "backupFiles": null,
+        "notes": []
+      }
+    }
+  ],
+  "next": null,
+  "previous": null
+}
